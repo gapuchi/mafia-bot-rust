@@ -41,7 +41,7 @@ async fn game(_ctx: Context<'_>) -> Result<(), Error> {
 async fn new(ctx: Context<'_>) -> Result<(), Error> {
     let guild_id = ctx.guild_id().ok_or("Must be in a guild")?;
 
-    let voice_channel_id = {
+    let voicehannel_id = {
         let guild = ctx.guild().ok_or("Could not find guild")?;
         guild
             .voice_states
