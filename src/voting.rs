@@ -1,9 +1,10 @@
 use poise::serenity_prelude::{self as serenity, CacheHttp, Mentionable};
 use std::collections::HashMap;
 
-use crate::game::{Game, Role};
-
-type Error = Box<dyn std::error::Error + Send + Sync>;
+use crate::{
+    game::{Game, Role},
+    types::Error,
+};
 
 pub struct Voting {
     pub message_id: serenity::MessageId,

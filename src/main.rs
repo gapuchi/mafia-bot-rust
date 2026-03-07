@@ -1,5 +1,7 @@
+mod event_handler;
 mod game;
 mod game_message;
+mod types;
 mod voting;
 
 use poise::serenity_prelude as serenity;
@@ -7,74 +9,11 @@ use serenity::Mentionable;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::game_message::GameMessage;
-use crate::voting::Voting;
-
-struct Data {
-    game: Arc<Mutex<Option<game::Game>>>,
-    game_message: Arc<Mutex<Option<GameMessage>>>,
-    voting_message: Arc<Mutex<Option<Voting>>>,
-}
-
-type Error = Box<dyn std::error::Error + Send + Sync>;
-type Context<'a> = poise::Context<'a, Data, Error>;
-
-async fn event_handler(
-    ctx: &serenity::Context,
-    event: &serenity::FullEvent,
-    _framework: poise::FrameworkContext<'_, Data, Error>,
-    data: &Data,
-) -> Result<(), Error> {
-    let mut game_guard = data.game.lock().await;
-    let Some(game) = game_guard.as_mut() else {
-        return Ok(());
-    };
-
-    match event {
-        serenity::FullEvent::ReactionAdd { add_reaction } => {
-            let Some(member) = &add_reaction.member else {
-                return Ok(());
-            };
-
-            if member.user.bot {
-                return Ok(());
-            }
-
-            let message_guard = data.game_message.lock().await;
-            let message = message_guard.as_ref();
-            if let Some(msg) = message
-                && msg.message_id == add_reaction.message_id
-            {
-                if let Some(voting_message) =
-                    msg.handle_add_reaction(ctx, &add_reaction, game).await?
-                {
-                    *data.voting_message.lock().await = Some(voting_message);
-                }
-            }
-
-            let mut voting_guard = data.voting_message.lock().await;
-            let voting_message = voting_guard.as_mut();
-            if let Some(msg) = voting_message
-                && msg.message_id == add_reaction.message_id
-            {
-                msg.handle_add_reaction(ctx, &add_reaction, game).await?
-            }
-        }
-        serenity::FullEvent::ReactionRemove { removed_reaction } => {
-            let mut voting_guard = data.voting_message.lock().await;
-            let voting_message = voting_guard.as_mut();
-
-            if let Some(msg) = voting_message
-                && msg.message_id == removed_reaction.message_id
-            {
-                msg.handle_remove_reaction(&removed_reaction).await?
-            }
-        }
-        _ => {}
-    }
-
-    Ok(())
-}
+use crate::{
+    event_handler::event_handler,
+    game_message::GameMessage,
+    types::{Context, Data, Error},
+};
 
 #[poise::command(prefix_command, slash_command)]
 async fn ping(ctx: Context<'_>) -> Result<(), Error> {
@@ -157,6 +96,7 @@ async fn main() {
     dotenvy::dotenv().ok();
     let token =
         std::env::var("DISCORD_TOKEN").expect("Expected a DISCORD_TOKEN in the environment");
+
     let intents = serenity::GatewayIntents::GUILDS
         | serenity::GatewayIntents::GUILD_MESSAGES
         | serenity::GatewayIntents::GUILD_MESSAGE_REACTIONS

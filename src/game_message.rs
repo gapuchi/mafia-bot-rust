@@ -4,10 +4,10 @@ use poise::serenity_prelude::{self as serenity, Member};
 use serenity::Mentionable;
 
 use crate::game::Game;
+use crate::types::Error;
 use crate::voting::Voting;
 
 const NUMBER_EMOJIS: [&str; 10] = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "0️⃣"];
-type Error = Box<dyn std::error::Error + Send + Sync>;
 
 pub struct GameMessage {
     pub message_id: serenity::MessageId,
