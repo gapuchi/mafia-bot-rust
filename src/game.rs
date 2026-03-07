@@ -1,6 +1,8 @@
 use poise::serenity_prelude as serenity;
 use rand::seq::SliceRandom;
 
+use crate::types::{Context, Error};
+
 #[derive(Debug, Clone)]
 pub enum Team {
     Blue,
@@ -10,7 +12,7 @@ pub enum Team {
 #[derive(Debug, Clone)]
 pub enum Role {
     Mafia,
-    Civilian,
+    Villager,
 }
 
 #[derive(Debug, Clone)]
@@ -26,7 +28,11 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(mut members: Vec<serenity::Member>, game_master: serenity::UserId) -> Self {
+    pub async fn new(
+        ctx: Context<'_>,
+        mut members: Vec<serenity::Member>,
+        game_master: serenity::UserId,
+    ) -> Result<Self, Error> {
         let mafia_count = if members.len() > 6 { 2 } else { 1 };
 
         members.shuffle(&mut rand::rng());
@@ -44,17 +50,26 @@ impl Game {
                 } else if i == mid && mafia_count == 2 {
                     Role::Mafia
                 } else {
-                    Role::Civilian
+                    Role::Villager
                 };
 
                 Player { member, team, role }
             })
             .collect();
 
-        Game {
+        for p in &players {
+            let c = p.member.user.create_dm_channel(ctx.http()).await?;
+            c.say(
+                ctx.http(),
+                format!("You are {:#?} on the {:#?} team!", p.role, p.team),
+            )
+            .await?;
+        }
+
+        Ok(Game {
             game_master,
             players,
-        }
+        })
     }
 
     pub fn blue_team(&self) -> Vec<&Player> {

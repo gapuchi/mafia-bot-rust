@@ -49,7 +49,7 @@ async fn new(ctx: Context<'_>) -> Result<(), Error> {
 
     let members = channel.members(ctx)?;
 
-    let game = game::Game::new(members, ctx.author().id);
+    let game = game::Game::new(ctx, members, ctx.author().id).await?;
 
     let blue_team: Vec<String> = game
         .blue_team()
