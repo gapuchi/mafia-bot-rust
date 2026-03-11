@@ -34,16 +34,16 @@ impl GameMessage {
             return Ok(None);
         };
 
-        let player_mentions = match emoji.as_str() {
-            "🔷" => game.blue_team(),
-            "🔶" => game.orange_team(),
+        let player_to_vote_mentions = match emoji.as_str() {
+            "🔷" => game.orange_team(),
+            "🔶" => game.blue_team(),
             _ => {
                 reaction.delete(ctx).await?;
                 return Ok(None);
             }
         };
 
-        let map: Vec<(&'static str, &Member)> = player_mentions
+        let map: Vec<(&'static str, &Member)> = player_to_vote_mentions
             .iter()
             .enumerate()
             .map(|(i, p)| (NUMBER_EMOJIS[i % 10], &p.member))
