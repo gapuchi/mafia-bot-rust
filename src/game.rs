@@ -1,5 +1,5 @@
-use poise::serenity_prelude as serenity;
-use rand::seq::SliceRandom;
+use poise::serenity_prelude::{self as serenity, UserId};
+use rand::seq::{IndexedRandom, SliceRandom};
 
 use crate::types::{Context, Error};
 
@@ -24,7 +24,8 @@ pub struct Player {
 
 pub struct Game {
     pub game_master: serenity::UserId,
-    pub players: Vec<Player>,
+    pub blue_team: Vec<Player>,
+    pub orange_team: Vec<Player>,
 }
 
 impl Game {
@@ -33,29 +34,41 @@ impl Game {
         mut members: Vec<serenity::Member>,
         game_master: serenity::UserId,
     ) -> Result<Self, Error> {
-        let mafia_count = if members.len() > 6 { 2 } else { 1 };
+        // In block to force ThreadRng to drop.
+        let players = {
+            let mut rng = rand::rng();
+            let mid = members.len() / 2;
 
-        members.shuffle(&mut rand::rng());
+            members.shuffle(&mut rng);
 
-        let mid = members.len() / 2;
+            let user_ids = members.iter().map(|m| m.user.id).collect::<Vec<UserId>>();
+            let (b, o) = user_ids.split_at(mid);
 
-        let players: Vec<Player> = members
-            .into_iter()
-            .enumerate()
-            .map(|(i, member)| {
-                let team = if i < mid { Team::Blue } else { Team::Orange };
+            let mafia_selection = if members.len() > 6 {
+                vec![*b.choose(&mut rng).unwrap(), *o.choose(&mut rng).unwrap()]
+            } else {
+                vec![members.choose(&mut rng).unwrap().user.id]
+            };
 
-                let role = if i == 0 {
-                    Role::Mafia
-                } else if i == mid && mafia_count == 2 {
-                    Role::Mafia
-                } else {
-                    Role::Villager
-                };
+            members
+                .into_iter()
+                .map(|member| {
+                    let team = if b.contains(&member.user.id) {
+                        Team::Blue
+                    } else {
+                        Team::Orange
+                    };
 
-                Player { member, team, role }
-            })
-            .collect();
+                    let role = if mafia_selection.contains(&member.user.id) {
+                        Role::Mafia
+                    } else {
+                        Role::Villager
+                    };
+
+                    return Player { member, team, role };
+                })
+                .collect::<Vec<Player>>()
+        };
 
         for p in &players {
             let c = p.member.user.create_dm_channel(ctx.http()).await?;
@@ -66,23 +79,21 @@ impl Game {
             .await?;
         }
 
+        let (blue_team, orange_team): (Vec<Player>, Vec<Player>) = players
+            .into_iter()
+            .partition(|p| matches!(p.team, Team::Blue));
+
         Ok(Game {
             game_master,
-            players,
+            blue_team,
+            orange_team,
         })
     }
 
-    pub fn blue_team(&self) -> Vec<&Player> {
-        self.players
+    pub fn players(&self) -> Vec<&Player> {
+        self.blue_team
             .iter()
-            .filter(|p| matches!(p.team, Team::Blue))
-            .collect()
-    }
-
-    pub fn orange_team(&self) -> Vec<&Player> {
-        self.players
-            .iter()
-            .filter(|p| matches!(p.team, Team::Orange))
+            .chain(self.orange_team.iter())
             .collect()
     }
 }

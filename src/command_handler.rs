@@ -32,13 +32,13 @@ pub async fn create_game(ctx: Context<'_>) -> Result<(), Error> {
     let game = Game::new(ctx, members, ctx.author().id).await?;
 
     let blue_team: Vec<String> = game
-        .blue_team()
+        .blue_team
         .iter()
         .map(|p| p.member.mention().to_string())
         .collect();
 
     let orange_team: Vec<String> = game
-        .orange_team()
+        .orange_team
         .iter()
         .map(|p| p.member.mention().to_string())
         .collect();

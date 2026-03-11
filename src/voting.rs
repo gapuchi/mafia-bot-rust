@@ -104,7 +104,7 @@ impl Voting {
         game: &Game,
     ) -> Result<(), Error> {
         let mafia: Vec<String> = game
-            .players
+            .players()
             .iter()
             .filter(|p| matches!(p.role, Role::Mafia))
             .map(|p| p.member.mention().to_string())

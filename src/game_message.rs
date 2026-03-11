@@ -35,8 +35,8 @@ impl GameMessage {
         };
 
         let player_to_vote_mentions = match emoji.as_str() {
-            "🔷" => game.orange_team(),
-            "🔶" => game.blue_team(),
+            "🔷" => &game.orange_team,
+            "🔶" => &game.blue_team,
             _ => {
                 reaction.delete(ctx).await?;
                 return Ok(None);
