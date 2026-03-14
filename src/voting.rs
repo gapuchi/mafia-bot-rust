@@ -8,6 +8,7 @@ use crate::{
 
 pub struct Voting {
     pub message_id: serenity::MessageId,
+    pub population: usize,
     pub number_to_member: HashMap<String, serenity::UserId>,
     pub votes: HashMap<serenity::UserId, serenity::UserId>,
     pub is_done: bool,
@@ -63,7 +64,7 @@ impl Voting {
 
         self.votes.insert(voter, *vote);
 
-        if self.votes.len() == self.number_to_member.len() {
+        if self.votes.len() == self.population {
             self.is_done = true;
             self.reveal_mafia(ctx, reaction, game).await?;
             self.count_votes();

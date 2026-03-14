@@ -73,6 +73,7 @@ impl GameMessage {
 
         Ok(Some(Voting {
             message_id: message.id,
+            population: game.players().len(),
             number_to_member: map
                 .into_iter()
                 .map(|(emoji, member)| (emoji.to_string(), member.user.id))
