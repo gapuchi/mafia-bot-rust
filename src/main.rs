@@ -20,13 +20,23 @@ async fn ping(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-#[poise::command(prefix_command, slash_command, subcommands("new"))]
+#[poise::command(prefix_command, slash_command, subcommands("game_new"))]
 async fn game(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-#[poise::command(prefix_command, slash_command, guild_only)]
-async fn new(ctx: Context<'_>) -> Result<(), Error> {
+#[poise::command(prefix_command, slash_command, guild_only, rename = "new")]
+async fn game_new(ctx: Context<'_>) -> Result<(), Error> {
+    command_handler::create_simple_game(ctx).await
+}
+
+#[poise::command(prefix_command, slash_command, subcommands("mafia_new"))]
+async fn mafia(_ctx: Context<'_>) -> Result<(), Error> {
+    Ok(())
+}
+
+#[poise::command(prefix_command, slash_command, guild_only, rename = "new")]
+async fn mafia_new(ctx: Context<'_>) -> Result<(), Error> {
     command_handler::create_game(ctx).await
 }
 
@@ -56,7 +66,7 @@ async fn main() {
                 case_insensitive_commands: true,
                 ..Default::default()
             },
-            commands: vec![ping(), game(), register()],
+            commands: vec![ping(), game(), mafia(), register()],
             event_handler: |ctx, event, framework, data| {
                 Box::pin(event_handler(ctx, event, framework, data))
             },

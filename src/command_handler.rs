@@ -7,7 +7,9 @@ use crate::{
 use poise::serenity_prelude as serenity;
 use serenity::Mentionable;
 
-pub async fn create_game(ctx: Context<'_>) -> Result<(), Error> {
+async fn get_voice_channel_members(
+    ctx: Context<'_>,
+) -> Result<Vec<serenity::Member>, Error> {
     let guild_id = ctx.guild_id().expect("guild_only ensures this is Some");
 
     let voice_channel_id = {
@@ -22,15 +24,14 @@ pub async fn create_game(ctx: Context<'_>) -> Result<(), Error> {
     };
 
     let channels = guild_id.channels(ctx).await?;
-
     let channel = channels
         .get(&voice_channel_id)
         .ok_or("Could not find channel")?;
 
-    let members = channel.members(ctx)?;
+    Ok(channel.members(ctx)?)
+}
 
-    let game = Game::new(ctx, members, ctx.author().id).await?;
-
+async fn post_game(ctx: Context<'_>, game: Game) -> Result<(), Error> {
     let blue_team: Vec<String> = game
         .blue_team
         .iter()
@@ -52,7 +53,6 @@ pub async fn create_game(ctx: Context<'_>) -> Result<(), Error> {
         ));
 
     let reply = ctx.send(poise::CreateReply::default().embed(embed)).await?;
-
     let message = reply.into_message().await?;
     message.react(ctx.http(), '🔷').await?;
     message.react(ctx.http(), '🔶').await?;
@@ -63,4 +63,16 @@ pub async fn create_game(ctx: Context<'_>) -> Result<(), Error> {
     });
 
     Ok(())
+}
+
+pub async fn create_simple_game(ctx: Context<'_>) -> Result<(), Error> {
+    let members = get_voice_channel_members(ctx).await?;
+    let game = Game::new(members, ctx.author().id);
+    post_game(ctx, game).await
+}
+
+pub async fn create_game(ctx: Context<'_>) -> Result<(), Error> {
+    let members = get_voice_channel_members(ctx).await?;
+    let game = Game::mafia(ctx, members, ctx.author().id).await?;
+    post_game(ctx, game).await
 }
