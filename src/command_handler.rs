@@ -68,7 +68,26 @@ async fn post_game(ctx: Context<'_>, game: Game) -> Result<(), Error> {
 pub async fn create_simple_game(ctx: Context<'_>) -> Result<(), Error> {
     let members = get_voice_channel_members(ctx).await?;
     let game = Game::new(members, ctx.author().id);
-    post_game(ctx, game).await
+
+    let blue_team: Vec<String> = game
+        .blue_team
+        .iter()
+        .map(|p| p.member.mention().to_string())
+        .collect();
+
+    let orange_team: Vec<String> = game
+        .orange_team
+        .iter()
+        .map(|p| p.member.mention().to_string())
+        .collect();
+
+    let embed = serenity::CreateEmbed::default()
+        .title("New Game!")
+        .field("**Blue Team:**", blue_team.join("\n"), true)
+        .field("**Orange Team:**", orange_team.join("\n"), true);
+
+    ctx.send(poise::CreateReply::default().embed(embed)).await?;
+    Ok(())
 }
 
 pub async fn create_game(ctx: Context<'_>, mafia_count: Option<u32>) -> Result<(), Error> {
