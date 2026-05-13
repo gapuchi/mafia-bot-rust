@@ -1,4 +1,4 @@
-mod command_handler;
+mod commands;
 mod event_handler;
 mod game;
 mod game_message;
@@ -9,42 +9,7 @@ use poise::serenity_prelude as serenity;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::{
-    event_handler::event_handler,
-    types::{Context, Data, Error},
-};
-
-#[poise::command(prefix_command, slash_command)]
-async fn ping(ctx: Context<'_>) -> Result<(), Error> {
-    ctx.say("pong").await?;
-    Ok(())
-}
-
-#[poise::command(prefix_command, slash_command, subcommands("game_new"))]
-async fn game(_ctx: Context<'_>) -> Result<(), Error> {
-    Ok(())
-}
-
-#[poise::command(prefix_command, slash_command, guild_only, rename = "new")]
-async fn game_new(ctx: Context<'_>) -> Result<(), Error> {
-    command_handler::create_simple_game(ctx).await
-}
-
-#[poise::command(prefix_command, slash_command, subcommands("mafia_new"))]
-async fn mafia(_ctx: Context<'_>) -> Result<(), Error> {
-    Ok(())
-}
-
-#[poise::command(prefix_command, slash_command, guild_only, rename = "new")]
-async fn mafia_new(ctx: Context<'_>, mafia_count: Option<u32>) -> Result<(), Error> {
-    command_handler::create_game(ctx, mafia_count).await
-}
-
-#[poise::command(prefix_command, slash_command)]
-pub async fn register(ctx: Context<'_>) -> Result<(), Error> {
-    poise::builtins::register_application_commands_buttons(ctx).await?;
-    Ok(())
-}
+use crate::{event_handler::event_handler, types::Data};
 
 #[tokio::main]
 async fn main() {
@@ -66,7 +31,12 @@ async fn main() {
                 case_insensitive_commands: true,
                 ..Default::default()
             },
-            commands: vec![ping(), game(), mafia(), register()],
+            commands: vec![
+                commands::ping(),
+                commands::game(),
+                commands::mafia(),
+                commands::register(),
+            ],
             event_handler: |ctx, event, framework, data| {
                 Box::pin(event_handler(ctx, event, framework, data))
             },

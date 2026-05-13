@@ -7,9 +7,7 @@ use crate::{
 use poise::serenity_prelude as serenity;
 use serenity::Mentionable;
 
-async fn get_voice_channel_members(
-    ctx: Context<'_>,
-) -> Result<Vec<serenity::Member>, Error> {
+async fn get_voice_channel_members(ctx: Context<'_>) -> Result<Vec<serenity::Member>, Error> {
     let guild_id = ctx.guild_id().expect("guild_only ensures this is Some");
 
     let voice_channel_id = {
@@ -92,6 +90,48 @@ pub async fn create_simple_game(ctx: Context<'_>) -> Result<(), Error> {
 
 pub async fn create_game(ctx: Context<'_>, mafia_count: Option<u32>) -> Result<(), Error> {
     let members = get_voice_channel_members(ctx).await?;
-    let game = Game::mafia(ctx, members, ctx.author().id, mafia_count).await?;
+    let game = Game::mafia(members, ctx.author().id, mafia_count);
+
+    for p in game.players() {
+        let dm = p.member.user.create_dm_channel(ctx.http()).await?;
+        dm.say(
+            ctx.http(),
+            format!("You are {:?} on the {:?} team!", p.role, p.team),
+        )
+        .await?;
+    }
+
     post_game(ctx, game).await
+}
+
+#[poise::command(prefix_command, slash_command)]
+pub async fn ping(ctx: Context<'_>) -> Result<(), Error> {
+    ctx.say("pong").await?;
+    Ok(())
+}
+
+#[poise::command(prefix_command, slash_command, subcommands("game_new"))]
+pub async fn game(_ctx: Context<'_>) -> Result<(), Error> {
+    Ok(())
+}
+
+#[poise::command(prefix_command, slash_command, guild_only, rename = "new")]
+pub async fn game_new(ctx: Context<'_>) -> Result<(), Error> {
+    create_simple_game(ctx).await
+}
+
+#[poise::command(prefix_command, slash_command, subcommands("mafia_new"))]
+pub async fn mafia(_ctx: Context<'_>) -> Result<(), Error> {
+    Ok(())
+}
+
+#[poise::command(prefix_command, slash_command, guild_only, rename = "new")]
+pub async fn mafia_new(ctx: Context<'_>, mafia_count: Option<u32>) -> Result<(), Error> {
+    create_game(ctx, mafia_count).await
+}
+
+#[poise::command(prefix_command, slash_command)]
+pub async fn register(ctx: Context<'_>) -> Result<(), Error> {
+    poise::builtins::register_application_commands_buttons(ctx).await?;
+    Ok(())
 }

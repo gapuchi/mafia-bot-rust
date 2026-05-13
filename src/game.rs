@@ -2,8 +2,6 @@ use poise::serenity_prelude::{self as serenity, UserId};
 use rand::Rng;
 use rand::seq::{IndexedRandom, SliceRandom};
 
-use crate::types::{Context, Error};
-
 #[derive(Debug, Clone)]
 pub enum Team {
     Blue,
@@ -96,65 +94,52 @@ impl Game {
         }
     }
 
-    pub async fn mafia(
-        ctx: Context<'_>,
+    pub fn mafia(
         members: Vec<serenity::Member>,
         game_master: serenity::UserId,
         mafia_count: Option<u32>,
-    ) -> Result<Self, Error> {
-        // Inner block forces ThreadRng to drop before the first .await.
-        let players: Vec<Player> = {
-            let players = assign_teams(members);
-            let mut rng = rand::rng();
+    ) -> Self {
+        let players = assign_teams(members);
+        let mut rng = rand::rng();
 
-            let blue_ids: Vec<UserId> = players
-                .iter()
-                .filter(|p| matches!(p.team, Team::Blue))
-                .map(|p| p.member.user.id)
-                .collect();
-            let orange_ids: Vec<UserId> = players
-                .iter()
-                .filter(|p| matches!(p.team, Team::Orange))
-                .map(|p| p.member.user.id)
-                .collect();
+        let blue_ids: Vec<UserId> = players
+            .iter()
+            .filter(|p| matches!(p.team, Team::Blue))
+            .map(|p| p.member.user.id)
+            .collect();
+        let orange_ids: Vec<UserId> = players
+            .iter()
+            .filter(|p| matches!(p.team, Team::Orange))
+            .map(|p| p.member.user.id)
+            .collect();
 
-            let count = mafia_count
-                .map(|c| c as usize)
-                .unwrap_or(if players.len() > 6 { 2 } else { 1 });
+        let count = mafia_count
+            .map(|c| c as usize)
+            .unwrap_or(if players.len() > 6 { 2 } else { 1 });
 
-            let mafia_selection = select_mafia(count, &blue_ids, &orange_ids, &mut rng);
+        let mafia_selection = select_mafia(count, &blue_ids, &orange_ids, &mut rng);
 
-            players
-                .into_iter()
-                .map(|p| {
-                    let role = if mafia_selection.contains(&p.member.user.id) {
-                        Role::Mafia
-                    } else {
-                        Role::Villager
-                    };
-                    Player { role, ..p }
-                })
-                .collect()
-        };
-
-        for p in &players {
-            let c = p.member.user.create_dm_channel(ctx.http()).await?;
-            c.say(
-                ctx.http(),
-                format!("You are {:#?} on the {:#?} team!", p.role, p.team),
-            )
-            .await?;
-        }
+        let players: Vec<Player> = players
+            .into_iter()
+            .map(|p| {
+                let role = if mafia_selection.contains(&p.member.user.id) {
+                    Role::Mafia
+                } else {
+                    Role::Villager
+                };
+                Player { role, ..p }
+            })
+            .collect();
 
         let (blue_team, orange_team) = players
             .into_iter()
             .partition(|p| matches!(p.team, Team::Blue));
 
-        Ok(Game {
+        Game {
             game_master,
             blue_team,
             orange_team,
-        })
+        }
     }
 
     pub fn players(&self) -> Vec<&Player> {
