@@ -71,8 +71,8 @@ pub async fn create_simple_game(ctx: Context<'_>) -> Result<(), Error> {
     post_game(ctx, game).await
 }
 
-pub async fn create_game(ctx: Context<'_>) -> Result<(), Error> {
+pub async fn create_game(ctx: Context<'_>, mafia_count: Option<u32>) -> Result<(), Error> {
     let members = get_voice_channel_members(ctx).await?;
-    let game = Game::mafia(ctx, members, ctx.author().id).await?;
+    let game = Game::mafia(ctx, members, ctx.author().id, mafia_count).await?;
     post_game(ctx, game).await
 }

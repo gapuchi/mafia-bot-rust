@@ -1,5 +1,6 @@
 use poise::serenity_prelude::{self as serenity, UserId};
-use rand::{seq::{IndexedRandom, SliceRandom}, Rng};
+use rand::Rng;
+use rand::seq::{IndexedRandom, SliceRandom};
 
 use crate::types::{Context, Error};
 
@@ -30,15 +31,13 @@ pub struct Game {
 
 fn assign_teams(mut members: Vec<serenity::Member>) -> Vec<Player> {
     let mut rng = rand::rng();
-    let half = members.len() / 2;
-    let mid = if members.len() % 2 == 1 && rng.random::<bool>() {
-        half + 1
-    } else {
-        half
-    };
     members.shuffle(&mut rng);
 
-    let (blue_members, orange_members) = members.split_at(mid);
+    let n = members.len();
+    let extra_to_blue = n % 2 == 1 && rng.random_bool(0.5);
+    let blue_size = n / 2 + if extra_to_blue { 1 } else { 0 };
+
+    let (blue_members, orange_members) = members.split_at(blue_size);
 
     blue_members
         .iter()
@@ -52,6 +51,34 @@ fn assign_teams(mut members: Vec<serenity::Member>) -> Vec<Player> {
             team: Team::Orange,
             role: Role::Villager,
         }))
+        .collect()
+}
+
+fn select_mafia(
+    count: usize,
+    blue_ids: &[UserId],
+    orange_ids: &[UserId],
+    rng: &mut impl Rng,
+) -> Vec<UserId> {
+    let larger = count.div_ceil(2);
+    let smaller = count / 2;
+
+    let (blue_count, orange_count) = match blue_ids.len().cmp(&orange_ids.len()) {
+        std::cmp::Ordering::Greater => (larger, smaller),
+        std::cmp::Ordering::Less => (smaller, larger),
+        std::cmp::Ordering::Equal => {
+            if rng.random_bool(0.5) {
+                (larger, smaller)
+            } else {
+                (smaller, larger)
+            }
+        }
+    };
+
+    blue_ids
+        .choose_multiple(rng, blue_count)
+        .chain(orange_ids.choose_multiple(rng, orange_count))
+        .copied()
         .collect()
 }
 
@@ -73,6 +100,7 @@ impl Game {
         ctx: Context<'_>,
         members: Vec<serenity::Member>,
         game_master: serenity::UserId,
+        mafia_count: Option<u32>,
     ) -> Result<Self, Error> {
         // Inner block forces ThreadRng to drop before the first .await.
         let players: Vec<Player> = {
@@ -90,14 +118,11 @@ impl Game {
                 .map(|p| p.member.user.id)
                 .collect();
 
-            let mafia_selection = if players.len() > 6 {
-                vec![
-                    *blue_ids.choose(&mut rng).unwrap(),
-                    *orange_ids.choose(&mut rng).unwrap(),
-                ]
-            } else {
-                vec![players.choose(&mut rng).unwrap().member.user.id]
-            };
+            let count = mafia_count
+                .map(|c| c as usize)
+                .unwrap_or(if players.len() > 6 { 2 } else { 1 });
+
+            let mafia_selection = select_mafia(count, &blue_ids, &orange_ids, &mut rng);
 
             players
                 .into_iter()

@@ -36,8 +36,8 @@ async fn mafia(_ctx: Context<'_>) -> Result<(), Error> {
 }
 
 #[poise::command(prefix_command, slash_command, guild_only, rename = "new")]
-async fn mafia_new(ctx: Context<'_>) -> Result<(), Error> {
-    command_handler::create_game(ctx).await
+async fn mafia_new(ctx: Context<'_>, mafia_count: Option<u32>) -> Result<(), Error> {
+    command_handler::create_game(ctx, mafia_count).await
 }
 
 #[poise::command(prefix_command, slash_command)]
