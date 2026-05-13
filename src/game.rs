@@ -1,5 +1,5 @@
 use poise::serenity_prelude::{self as serenity, UserId};
-use rand::seq::{IndexedRandom, SliceRandom};
+use rand::{seq::{IndexedRandom, SliceRandom}, Rng};
 
 use crate::types::{Context, Error};
 
@@ -30,7 +30,12 @@ pub struct Game {
 
 fn assign_teams(mut members: Vec<serenity::Member>) -> Vec<Player> {
     let mut rng = rand::rng();
-    let mid = members.len() / 2;
+    let half = members.len() / 2;
+    let mid = if members.len() % 2 == 1 && rng.random::<bool>() {
+        half + 1
+    } else {
+        half
+    };
     members.shuffle(&mut rng);
 
     let (blue_members, orange_members) = members.split_at(mid);
