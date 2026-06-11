@@ -1,6 +1,6 @@
 use crate::{
     game::Game,
-    game_message::GameMessage,
+    game_message::{GameMessage, reveal_role_button},
     types::{Context, Error},
 };
 
@@ -47,10 +47,16 @@ async fn post_game(ctx: Context<'_>, game: Game) -> Result<(), Error> {
         .field("**Blue Team:**", blue_team.join("\n"), true)
         .field("**Orange Team:**", orange_team.join("\n"), true)
         .footer(serenity::CreateEmbedFooter::new(
-            " 🔷 Blue won\n🔶 Orange won",
+            "Click \"Reveal My Role\" to see your role privately\n🔷 Blue won\n🔶 Orange won",
         ));
 
-    let reply = ctx.send(poise::CreateReply::default().embed(embed)).await?;
+    let reply = ctx
+        .send(
+            poise::CreateReply::default()
+                .embed(embed)
+                .components(vec![reveal_role_button()]),
+        )
+        .await?;
     let message = reply.into_message().await?;
     message.react(ctx.http(), '🔷').await?;
     message.react(ctx.http(), '🔶').await?;
@@ -91,16 +97,6 @@ pub async fn create_simple_game(ctx: Context<'_>) -> Result<(), Error> {
 pub async fn create_game(ctx: Context<'_>, mafia_count: Option<u32>) -> Result<(), Error> {
     let members = get_voice_channel_members(ctx).await?;
     let game = Game::mafia(members, ctx.author().id, mafia_count);
-
-    for p in game.players() {
-        let dm = p.member.user.create_dm_channel(ctx.http()).await?;
-        dm.say(
-            ctx.http(),
-            format!("You are {:?} on the {:?} team!", p.role, p.team),
-        )
-        .await?;
-    }
-
     post_game(ctx, game).await
 }
 

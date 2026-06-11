@@ -15,7 +15,34 @@ pub async fn event_handler(
         serenity::FullEvent::ReactionRemove { removed_reaction } => {
             handle_remove_reaction(removed_reaction, data).await?
         }
+        serenity::FullEvent::InteractionCreate { interaction } => {
+            handle_interaction(ctx, interaction, data).await?;
+        }
         _ => {}
+    }
+
+    Ok(())
+}
+
+async fn handle_interaction(
+    ctx: &serenity::Context,
+    interaction: &serenity::Interaction,
+    data: &Data,
+) -> Result<(), Error> {
+    let Some(component) = interaction.as_message_component() else {
+        return Ok(());
+    };
+
+    let game_guard = data.game.lock().await;
+    let Some(game) = game_guard.as_ref() else {
+        return Ok(());
+    };
+
+    let message_guard = data.game_message.lock().await;
+    if let Some(game_message) = message_guard.as_ref() {
+        game_message
+            .handle_component_interaction(ctx, component, game)
+            .await?;
     }
 
     Ok(())

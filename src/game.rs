@@ -8,10 +8,28 @@ pub enum Team {
     Orange,
 }
 
+impl std::fmt::Display for Team {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Team::Blue => write!(f, "Blue"),
+            Team::Orange => write!(f, "Orange"),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Role {
     Mafia,
     Villager,
+}
+
+impl std::fmt::Display for Role {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Role::Mafia => write!(f, "Mafia"),
+            Role::Villager => write!(f, "Villager"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -19,6 +37,24 @@ pub struct Player {
     pub member: serenity::Member,
     pub team: Team,
     pub role: Role,
+}
+
+impl Player {
+    pub fn role_embed(&self) -> serenity::CreateEmbed {
+        let team_emoji = match self.team {
+            Team::Blue => "🔷",
+            Team::Orange => "🔶",
+        };
+
+        serenity::CreateEmbed::default()
+            .title("Your Role")
+            .description(format!(
+                "You are **{}** on the **{}** team! {}",
+                self.role,
+                self.team,
+                team_emoji
+            ))
+    }
 }
 
 pub struct Game {
@@ -147,5 +183,11 @@ impl Game {
             .iter()
             .chain(self.orange_team.iter())
             .collect()
+    }
+
+    pub fn player_for(&self, user_id: UserId) -> Option<&Player> {
+        self.players()
+            .into_iter()
+            .find(|player| player.member.user.id == user_id)
     }
 }

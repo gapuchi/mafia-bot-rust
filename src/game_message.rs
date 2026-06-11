@@ -8,12 +8,50 @@ use crate::types::Error;
 use crate::voting::Voting;
 
 const NUMBER_EMOJIS: [&str; 10] = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "0️⃣"];
+pub const REVEAL_ROLE_BUTTON_ID: &str = "mafia_reveal_role";
+
+pub fn reveal_role_button() -> serenity::CreateActionRow {
+    serenity::CreateActionRow::Buttons(vec![serenity::CreateButton::new(REVEAL_ROLE_BUTTON_ID)
+        .label("Reveal My Role")
+        .style(serenity::ButtonStyle::Primary)])
+}
 
 pub struct GameMessage {
     pub message_id: serenity::MessageId,
 }
 
 impl GameMessage {
+    pub async fn handle_component_interaction(
+        &self,
+        ctx: &serenity::Context,
+        interaction: &serenity::ComponentInteraction,
+        game: &Game,
+    ) -> Result<(), Error> {
+        if interaction.data.custom_id != REVEAL_ROLE_BUTTON_ID {
+            return Ok(());
+        }
+
+        if interaction.message.id != self.message_id {
+            return Ok(());
+        }
+
+        let response = match game.player_for(interaction.user.id) {
+            Some(player) => serenity::CreateInteractionResponse::Message(
+                serenity::CreateInteractionResponseMessage::new()
+                    .embed(player.role_embed())
+                    .ephemeral(true),
+            ),
+            None => serenity::CreateInteractionResponse::Message(
+                serenity::CreateInteractionResponseMessage::new()
+                    .content("You're not in this game.")
+                    .ephemeral(true),
+            ),
+        };
+
+        interaction.create_response(ctx, response).await?;
+        Ok(())
+    }
+
     pub async fn handle_add_reaction(
         &self,
         ctx: &serenity::Context,
