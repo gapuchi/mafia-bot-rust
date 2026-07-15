@@ -28,8 +28,10 @@
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = with pkgs; [
             cargo
+            cargo-release
             rustc
             gcc
+            just
           ];
         };
       }
